@@ -17,37 +17,84 @@ mongoose.connect('mongodb://localhost:27017/bbc', { useNewUrlParser: true });
 
 const conn = mongoose.connection;
 
+// 连接数据库
 conn.on('connected', function () {
 
   console.log('连接成功，YE~')
 });
 
-// 定义字义 Schema
+// 定义用户数据模型 Schema
 const userSchema = mongoose.Schema({
   loginname: {type: String, required: true}, // 昵称
   password: {type: String, required: true},
   avatar_url: {type: String}, // 头像地址
-  create_at: {type: String}, // 入职时间
-  recent_topic: {type: Array},
+  create_at: {type: Date, default: Date.now}, // 注册时间
+  recent_topics: {type: Array},
   recent_replies: {type: Array},
 
 });
 
+// 定义用户收藏数据模型 Schema
+const collectSchema = mongoose.Schema({
+  loginname: {type: String, required: true},
+  collected_topics: {type: Array, required: true}
+});
+
+// 定义所有文章的数据模型 Schema
+const topicSchema = mongoose.Schema({
+  author: {type: Object, required: true },
+  author_id: {type: String, required: true },
+  content: {type: String, required: true },
+  create_at: {type: Date, default: Date.now},
+  good: {type: Boolean },
+  is_collection: { type: Boolean },
+  last_reply_at: {type: Date, default: Date.now},
+  reply_count: { type: Number },
+  tab: { type: String, required: true },
+  title: { type: String, required: true },
+  top: { type: Boolean },
+  visit_count: {type: Number}
+});
+
 // 定义 Model
-const UserModel = mongoose.model('user', userSchema); // 集合为Users
+const UserModel = mongoose.model('user', userSchema); // 集合为 users
+const CollectModel = mongoose.model('collect', collectSchema); // collects
+const TopicModel = mongoose.model('topic', topicSchema); // topics
 
-function testSave() {
-// user 数据对象
-const user = {
-  email: 'duanyuting@utry.cn'
-};
-const userModel = new UserModel(user); // 保存到数据库
-userModel.save(function (err, user) {
-  console.log('save', err, user) })
+function test() {
+  // user 数据对象
+  const collect = {
+    loginname: 'abc',
+    collected_topics: []
+  };
+  const collectModel = new CollectModel(collect); // 保存到数据库
+  collectModel.save(function (err, user) {
+    console.log('save', err, user) })
 }
+// test();
 
-// testSave();
+function test1() {
+  // user 数据对象
+  const collect = {
+    author: {
+      loginname: 'abc',
+      avatar_url: "https://avatars2.githubusercontent.com/u/40653619?v=4&s=120",
+    },
+    author_id: '5d429bbdfd0f3ae9a8290d11',
+    content: "# 测试",
+    create_at: new Date(),
+    tab: 'all',
+    title: '这是一个测试文章'
+  };
+  const topicModel = new TopicModel(collect); // 保存到数据库
+  topicModel.save(function (err, user) {
+    console.log('save', err, user) })
+}
+// test1();
+
 // 向外暴露 Model
 // module.exports = xxx 只能暴露一次
 // exports.xxx = value exports.yyy = value2 可暴露多次
 exports.UserModel = UserModel;
+exports.CollectModel = CollectModel;
+exports.TopicModel = TopicModel;

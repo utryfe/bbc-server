@@ -3,6 +3,7 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var cors = require('cors');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -37,5 +38,19 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+// cors解决跨域问题
+app.use(cors({
+  "Access-Control-Allow-Origin":'*',
+  "Access-Control-Allow-Methods":"DELETE,PUT,POST,GET,OPTIONS",
+  "Access-Control-Allow-Credentials": "true"
+
+
+ /* origin:['http://localhost:8080'],
+
+  methods:['GET','POST'],
+
+  alloweHeaders:['Conten-Type', 'Authorization']*/
+}));
 
 module.exports = app;
