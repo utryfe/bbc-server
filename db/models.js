@@ -47,8 +47,9 @@ const topicSchema = mongoose.Schema({
   content: {type: String, required: true },
   create_at: {type: Date, default: Date.now},
   good: {type: Boolean },
-  is_collection: { type: Boolean },
+  is_collect: { type: Boolean },
   last_reply_at: {type: Date, default: Date.now},
+  replies: {type: Array},
   reply_count: { type: Number },
   tab: { type: String, required: true },
   title: { type: String, required: true },
@@ -64,14 +65,14 @@ const TopicModel = mongoose.model('topic', topicSchema); // topics
 function test() {
   // user 数据对象
   const collect = {
-    loginname: 'abc',
+    loginname: '借月色行凶',
     collected_topics: []
   };
   const collectModel = new CollectModel(collect); // 保存到数据库
   collectModel.save(function (err, user) {
     console.log('save', err, user) })
 }
-// test();
+ //test();
 
 function test1() {
   // user 数据对象
@@ -90,7 +91,7 @@ function test1() {
   topicModel.save(function (err, user) {
     console.log('save', err, user) })
 }
-// test1();
+//test1();
 
 // 向外暴露 Model
 // module.exports = xxx 只能暴露一次

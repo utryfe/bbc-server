@@ -42,6 +42,12 @@ router.post('/register', function (req, res) {
         };
         res.send(data)
       });
+
+      // 默认存一个空的收藏合辑
+      new CollectModel({
+        loginname,
+        collected_topics: []
+      }).save()
     }
   })
 });
@@ -92,7 +98,6 @@ router.get('/user/:loginname',function (req, res) {
   })
 });
 
-
 // 获取用户收藏的文章
 router.get('/topic_collect/:loginname',function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -104,6 +109,44 @@ router.get('/topic_collect/:loginname',function (req, res) {
       const { collected_topics } = user;
       const data = { data: collected_topics, success: true};
       return res.send(data)
+    }
+  })
+});
+
+// 获取文章详情
+router.get('/topic/:articleId', function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  const {articleId} = req.params;
+  const { loginname } = req.query;
+  var is_collect = false;
+  var data;
+    TopicModel.findOne({_id: articleId}, filter, function (err, user) {
+    if (!user) {
+      res.send({success: false, msg: '获取文章详情失败'})
+    } else {
+      const a = function(callback) {
+        // 查询自己是否收藏过这篇文章
+        CollectModel.findOne({loginname}, function (err, usr) {
+          if(usr.collected_topics.length > 0) {
+            usr.collected_topics.forEach(topic => {
+              if (topic._id == articleId) {  //ps: 不能强制转换
+                is_collect = true
+              } else {
+                is_collect = false
+              }
+            });
+          }
+          callback(null, 'aaa')
+        });
+      };
+      const b = function(callback) {
+        data = Object.assign(user, {is_collect});
+        callback(null, 'bbb')
+      };
+      async.series([a, b], function (err, result) {
+        console.log(result);
+        res.send({success: true, data})
+      });
     }
   })
 });
@@ -127,10 +170,17 @@ router.post('/topics', function (req, res) {
             avatar_url
           },
           author_id,
+          good: false,
+          is_collect: false,
+          replies: [],
+          reply_count: 0,
           content,
           create_at: new Date(),
+          last_reply_at: new Date(),
           tab,
-          title
+          title,
+          top: false,
+          visit_count: 0,
         }).save(function (err, doc) {
           doc_id = doc._id
           callback(null, doc._id)
@@ -152,12 +202,53 @@ router.post('/topics', function (req, res) {
       async.series([a,b], function (err, result) {
         usr.recent_topics.push(topic);
         usr.save(function (err) {
-          res.send({success: true})
+          res.send({success: true, topic_id: doc_id})
         })
       });
     }
   })
 });
 
+// 收藏文章
+router.post('/topic_collect/collect', function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  const { loginname, topic_id } = req.body;
+  TopicModel.findOne( {_id: topic_id}, filter, function (err, user) {
+    if(!user) {
+      return res.send({success: false, msg: '收藏失败'})
+    } else {
+      const collected = Object.assign(user, {is_collect: true});
+      CollectModel.findOne({loginname}, filter, function (err, usr) {
+        if(!usr) {
+          return res.send({success: false})
+        } else {
+          usr.collected_topics.push(collected);
+          usr.save(function (err) {
+            return res.send({success: true})
+          })
+        }
+      });
+
+    }
+  })
+});
+
+// 取消收藏
+router.post('/topic_collect/de_collect', function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  const { loginname, topic_id} = req.body;
+  CollectModel.findOne({loginname}, function (err, usr) {
+    if(!usr) {
+      res.send({success: false})
+    } else {
+      usr.collected_topics = usr.collected_topics.filter(topic => {
+        return topic._id != topic_id
+      });
+      usr.save(function (err) {
+        return res.send({success: true})
+      })
+    }
+  })
+});
 
 module.exports = router;
