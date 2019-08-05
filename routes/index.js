@@ -120,7 +120,7 @@ router.get('/topic/:articleId', function (req, res) {
   const { loginname } = req.query;
   var is_collect = false;
   var data;
-    TopicModel.findOne({_id: articleId}, filter, function (err, user) {
+  TopicModel.findOne({_id: articleId}, filter, function (err, user) {
     if (!user) {
       res.send({success: false, msg: '获取文章详情失败'})
     } else {
@@ -209,6 +209,31 @@ router.post('/topics', function (req, res) {
   })
 });
 
+// 修改文章
+router.post('/topics/update', function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  const {topic_id, loginname, title, tab, content} = req.body;
+
+  TopicModel.findById({_id: topic_id}, function (err, topic) {
+    if(err){
+      return res.send({success: false});
+    } else {
+      topic = Object.assign(topic, {title, tab, content});
+      topic.save(function (err) {
+        console.log('存进TopicModel');
+      })
+    }
+  });
+  UserModel.update({loginname, 'recent_topics.id': topic_id},
+    {'$set': {
+        'recent_topics.$.title': title
+      }},
+    function (err, doc) {
+      res.send({success: true})
+    });
+
+});
+
 // 收藏文章
 router.post('/topic_collect/collect', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -250,5 +275,76 @@ router.post('/topic_collect/de_collect', function (req, res) {
     }
   })
 });
+
+// 评论文章
+router.post('/topic/:topicId/replies', function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  const {topicId} = req.params;
+  const {loginname, content} = req.body; // 评论者的名字和内容
+  var author = {};
+  var topic_author = {};
+  var title;
+  UserModel.findOne({loginname}, function (err, usr) {
+    if(!usr) {
+      console.log(err)
+    } else {
+      const a = function(callback) {
+        author.loginname = usr.loginname;
+        author.avatar_url = usr.avatar_url;
+        callback(null, author)
+      };
+      const b = function(callback) {
+        TopicModel.findById({_id:topicId}, function (err, doc) {
+          if(!doc) {
+            console.log(err)
+          } else {
+            topic_author = doc.author;
+            title = doc.title;
+            doc.replies.push({
+              author,
+              content,
+              create_at: new Date(),
+              is_uped: false,
+              reply_id: null,
+              ups: [],
+            });
+            doc.reply_count = doc.replies.length;
+            doc.save(function (err) {
+              console.log(err);
+              callback(null, 'save')
+            })
+          }
+        })
+      };
+      async.series([a,b], function (err, result) {
+        const data = {
+          author: topic_author,
+          id: topicId,
+          title
+        };
+        if(usr.recent_replies.length != 0){
+          usr.recent_replies.forEach(item => {
+            if(item.id == topicId) { // 不需要重复添加
+              return false
+            } else {
+              usr.recent_replies.push(data);
+              usr.save()
+            }
+          })
+        } else {
+          usr.recent_replies.push(data);
+          usr.save()
+        }
+        return res.send({success: true})
+      })
+    }
+
+
+  })
+
+
+
+});
+
 
 module.exports = router;

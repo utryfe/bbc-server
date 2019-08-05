@@ -29,8 +29,26 @@ const userSchema = mongoose.Schema({
   password: {type: String, required: true},
   avatar_url: {type: String}, // 头像地址
   create_at: {type: Date, default: Date.now}, // 注册时间
-  recent_topics: {type: Array},
-  recent_replies: {type: Array},
+  recent_topics: [
+    {
+      author:{
+        loginname: {type: String},
+        avatar_url: {type: String}
+      },
+      id: {type: String},
+      title: {type: String}
+    }
+      ],
+  recent_replies: [
+    {
+      author:{
+        loginname: {type: String},
+        avatar_url: {type: String}
+      },
+      id: {type: String},
+      title: {type: String}
+    }
+  ],
 
 });
 
@@ -42,14 +60,29 @@ const collectSchema = mongoose.Schema({
 
 // 定义所有文章的数据模型 Schema
 const topicSchema = mongoose.Schema({
-  author: {type: Object, required: true },
+  author: {
+    loginname: {type: String},
+    avatar_url: {type: String}
+  },
   author_id: {type: String, required: true },
   content: {type: String, required: true },
   create_at: {type: Date, default: Date.now},
   good: {type: Boolean },
   is_collect: { type: Boolean },
   last_reply_at: {type: Date, default: Date.now},
-  replies: {type: Array},
+  replies:[
+    {
+      author: {
+        loginname: {type: String},
+        avatar_url: {type: String}
+      },
+      content: { type: String },
+      create_at: { type: Date },
+      is_uped: { type: Boolean },
+      reply_id: { type: String },
+      ups: { type: Array}
+    }
+  ],
   reply_count: { type: Number },
   tab: { type: String, required: true },
   title: { type: String, required: true },
