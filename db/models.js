@@ -90,10 +90,53 @@ const topicSchema = mongoose.Schema({
   visit_count: {type: Number}
 });
 
+// 定义消息的数据模型 Schema
+const messageSchema = mongoose.Schema({
+  has_read_messages: [
+    {
+      type: {type: String},
+      has_read: {type: Boolean},
+      author: {
+        loginname: {type: String},
+        avatar_url: {type: String},
+      },
+      topic: {
+        title: {type: String},
+        last_reply_at: {type: Date},
+      },
+      reply: {
+        content: {type: String},
+        ups: {type: Array},
+        create_at: {type: Date}
+      }
+    }
+  ],
+  hasnot_read_messages: [
+    {
+      type: {type: String},
+      has_read: {type: Boolean},
+      author: {
+        loginname: {type: String},
+        avatar_url: {type: String},
+      },
+      topic: {
+        title: {type: String},
+        last_reply_at: {type: Date},
+      },
+      reply: {
+        content: {type: String},
+        ups: {type: Array},
+        create_at: {type: Date}
+      }
+    }
+  ]
+});
+
 // 定义 Model
 const UserModel = mongoose.model('user', userSchema); // 集合为 users
 const CollectModel = mongoose.model('collect', collectSchema); // collects
 const TopicModel = mongoose.model('topic', topicSchema); // topics
+const MessageModel = mongoose.model('message', messageSchema); // messages
 
 function test() {
   // user 数据对象
@@ -132,3 +175,4 @@ function test1() {
 exports.UserModel = UserModel;
 exports.CollectModel = CollectModel;
 exports.TopicModel = TopicModel;
+exports.MessageModel = MessageModel;

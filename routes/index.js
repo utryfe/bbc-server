@@ -5,6 +5,7 @@ const md5 = require('blueimp-md5');
 const UserModel = require('../db/models').UserModel; // 一个一个引入的
 const CollectModel = require('../db/models').CollectModel;
 const TopicModel = require('../db/models').TopicModel;
+const MessageModel = require('../db/models').MessageModel;
 const filter = {password: 0, __v: 0}; // 查询时过滤出指定的属性
 
 /* GET home page. */
@@ -23,31 +24,55 @@ router.post('/register', function (req, res) {
     if (user) {
       res.send({success: false, msg: '此用户已存在'})
     } else {
-      new UserModel({
-        create_at: new Date(), // 注册时间
-        loginname, // 昵称
-        password: md5(password), // 密码
-        recent_topics: [],
-        recent_replies: [],
-        avatar_url: "https://avatars2.githubusercontent.com/u/40653619?v=4&s=120", // 头像
-      }).save(function (err, usr) {
-        // 生成一个cookie(userid: user.id), 并交给浏览器保存
-        res.cookie('userid', usr._id, {maxAge: 1000*60*60*24*7}); // 维持一天
-        const {avatar_url, loginname} = usr;
-        const data = {
-          avatar_url,
-          loginname,
-          id: usr._id,
-          success: true
-        };
-        res.send(data)
-      });
+
+      // 用户注册成功
+      const c = function (callback) {
+        new UserModel({
+          create_at: new Date(), // 注册时间
+          loginname, // 昵称
+          password: md5(password), // 密码
+          recent_topics: [],
+          recent_replies: [],
+          avatar_url: "https://avatars2.githubusercontent.com/u/40653619?v=4&s=120", // 头像
+        }).save(function (err, usr) {
+          // 生成一个cookie(userid: user.id), 并交给浏览器保存
+          res.cookie('userid', usr._id, {maxAge: 1000*60*60*24*7}); // 维持一天
+          const {avatar_url, loginname} = usr;
+          const data = {
+            avatar_url,
+            loginname,
+            id: usr._id,
+            success: true
+          };
+          callback(null, data);
+        });
+      };
 
       // 默认存一个空的收藏合辑
-      new CollectModel({
-        loginname,
-        collected_topics: []
-      }).save()
+      const a = function (callback) {
+        new CollectModel({
+          loginname,
+          collected_topics: []
+        }).save(function (err) {
+          callback(null, 'a')
+        })
+      };
+
+      // 默认存一个空的消息合辑
+      const b = function (callback) {
+        new MessageModel({
+          has_read_messages: [],
+          hasnot_read_messages: []
+        }).save(function (err) {
+          callback(null, 'b')
+        })
+      };
+
+      async.series([c,a,b], function (err, result) {
+        res.send(result[0])
+      })
+
+
     }
   })
 });
@@ -98,6 +123,26 @@ router.get('/user/:loginname',function (req, res) {
   })
 });
 
+// 获取首页所有文章
+router.get('/topics', function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  const { page, limit, tab} = req.query;
+  var query;
+  if(tab === 'all') {
+    query = {}
+  } else {
+    query= {tab}
+  }
+  TopicModel.find(query, function (err, doc) {
+    if(!doc) {
+      res.send({success: false})
+    } else {
+      res.send({data: doc, success: true})
+    }
+  })
+
+});
+
 // 获取用户收藏的文章
 router.get('/topic_collect/:loginname',function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -110,6 +155,24 @@ router.get('/topic_collect/:loginname',function (req, res) {
       const data = { data: collected_topics, success: true};
       return res.send(data)
     }
+  })
+});
+
+// 获取用户的未读消息数
+router.get('/message/count', function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  MessageModel.find({}, function (err, doc) {
+    const count = doc[0].hasnot_read_messages.length;
+    res.send({data: count})
+  })
+});
+
+// 获取用户的已读/未读消息
+router.get('/messages', function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  MessageModel.find({}, function (err, doc) {
+    const {has_read_messages, hasnot_read_messages } = doc[0];
+    res.send({data: {has_read_messages, hasnot_read_messages}, success: true})
   })
 });
 
@@ -126,25 +189,33 @@ router.get('/topic/:articleId', function (req, res) {
     } else {
       const a = function(callback) {
         // 查询自己是否收藏过这篇文章
-        CollectModel.findOne({loginname}, function (err, usr) {
-          if(usr.collected_topics.length > 0) {
-            usr.collected_topics.forEach(topic => {
-              if (topic._id == articleId) {  //ps: 不能强制转换
-                is_collect = true
-              } else {
-                is_collect = false
-              }
-            });
-          }
+        if(loginname != undefined) {
+          CollectModel.findOne({loginname}, function (err, usr) {
+            if(usr.collected_topics.length > 0) {
+              usr.collected_topics.forEach(topic => {
+                if (topic._id == articleId) {  //ps: 不能强制转换
+                  is_collect = true
+                } else {
+                  is_collect = false
+                }
+              });
+            }
+            callback(null, 'aaa')
+          });
+        } else {
           callback(null, 'aaa')
-        });
+        }
       };
       const b = function(callback) {
-        data = Object.assign(user, {is_collect});
+        if(is_collect) {
+          data = Object.assign(user, {is_collect});
+        } else {
+          data = user
+        }
+
         callback(null, 'bbb')
       };
       async.series([a, b], function (err, result) {
-        console.log(result);
         res.send({success: true, data})
       });
     }
@@ -182,7 +253,7 @@ router.post('/topics', function (req, res) {
           top: false,
           visit_count: 0,
         }).save(function (err, doc) {
-          doc_id = doc._id
+          doc_id = doc._id;
           callback(null, doc._id)
         });
       };
@@ -346,5 +417,38 @@ router.post('/topic/:topicId/replies', function (req, res) {
 
 });
 
+// 点赞文章
+router.post('/reply/:replyId/ups', function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  const { replyId } = req.params;
+  const { loginname } = req.body;
+  // 找到topics中这篇文章，ups[]添加loginname找到的点赞人id
+  UserModel.findOne({loginname}, function (err, usr) {
+    const { _id } = usr;
+    var action;
+    TopicModel.findOne({'replies._id': replyId}, function (err, doc) {
+      doc.replies.forEach(item => {
+        if(item._id == replyId) {
+          item.is_uped = !item.is_uped;
+          const idx = item.ups.indexOf(_id);
+          if((item.ups.length > 0 && idx == '-1' )|| item.ups.length == 0) {
+            item.ups.push(_id);
+            action = 'up'
+          } else {
+            item.ups.splice(idx, 1);
+            action = 'down'
+          }
+        }
+      });
+      doc.save(function (err) {
+        res.send({ action, success: true})
+      });
+    })
+  })
+
+
+});
+
+// 通知
 
 module.exports = router;
