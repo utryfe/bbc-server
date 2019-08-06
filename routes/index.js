@@ -77,7 +77,7 @@ router.post('/register', function (req, res) {
   })
 });
 
-// 登陆
+// 【用户】用户登陆
 router.post('/login', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
   const {loginname, password } = req.body;
@@ -99,7 +99,7 @@ router.post('/login', function (req, res) {
   })
 });
 
-// 获取用户信息
+// 【用户】获取用户信息
 router.get('/user/:loginname',function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
   const { loginname } = req.params;
@@ -123,7 +123,40 @@ router.get('/user/:loginname',function (req, res) {
   })
 });
 
-// 获取首页所有文章
+// 【用户】获取用户收藏的文章
+router.get('/topic_collect/:loginname',function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  const { loginname } = req.params;
+  CollectModel.findOne({loginname}, filter, function (err, user) {
+    if(!user) {
+      return res.send({success: false, msg: '获取用户收藏文章失败'})
+    } else {
+      const { collected_topics } = user;
+      const data = { data: collected_topics, success: true};
+      return res.send(data)
+    }
+  })
+});
+
+// 【用户】获取用户的未读消息数
+router.get('/message/count', function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  MessageModel.find({}, function (err, doc) {
+    const count = doc[0].hasnot_read_messages.length;
+    res.send({data: count})
+  })
+});
+
+// 【用户】获取用户的已读/未读消息
+router.get('/messages', function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  MessageModel.find({}, function (err, doc) {
+    const {has_read_messages, hasnot_read_messages } = doc[0];
+    res.send({data: {has_read_messages, hasnot_read_messages}, success: true})
+  })
+});
+
+// 【文章】获取所有文章
 router.get('/topics', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
   const { page, limit, tab} = req.query;
@@ -143,40 +176,7 @@ router.get('/topics', function (req, res) {
 
 });
 
-// 获取用户收藏的文章
-router.get('/topic_collect/:loginname',function (req, res) {
-  res.header("Access-Control-Allow-Origin", "*");
-  const { loginname } = req.params;
-  CollectModel.findOne({loginname}, filter, function (err, user) {
-    if(!user) {
-      return res.send({success: false, msg: '获取用户收藏文章失败'})
-    } else {
-      const { collected_topics } = user;
-      const data = { data: collected_topics, success: true};
-      return res.send(data)
-    }
-  })
-});
-
-// 获取用户的未读消息数
-router.get('/message/count', function (req, res) {
-  res.header("Access-Control-Allow-Origin", "*");
-  MessageModel.find({}, function (err, doc) {
-    const count = doc[0].hasnot_read_messages.length;
-    res.send({data: count})
-  })
-});
-
-// 获取用户的已读/未读消息
-router.get('/messages', function (req, res) {
-  res.header("Access-Control-Allow-Origin", "*");
-  MessageModel.find({}, function (err, doc) {
-    const {has_read_messages, hasnot_read_messages } = doc[0];
-    res.send({data: {has_read_messages, hasnot_read_messages}, success: true})
-  })
-});
-
-// 获取文章详情
+// 【文章】获取文章详情
 router.get('/topic/:articleId', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
   const {articleId} = req.params;
@@ -222,7 +222,7 @@ router.get('/topic/:articleId', function (req, res) {
   })
 });
 
-// 发布文章
+// 【文章】发布文章
 router.post('/topics', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
   const {loginname, title, tab, content} = req.body;
@@ -280,7 +280,7 @@ router.post('/topics', function (req, res) {
   })
 });
 
-// 修改文章
+// 【文章】修改文章
 router.post('/topics/update', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
   const {topic_id, loginname, title, tab, content} = req.body;
@@ -305,7 +305,7 @@ router.post('/topics/update', function (req, res) {
 
 });
 
-// 收藏文章
+// 【文章】收藏文章
 router.post('/topic_collect/collect', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
   const { loginname, topic_id } = req.body;
@@ -329,7 +329,7 @@ router.post('/topic_collect/collect', function (req, res) {
   })
 });
 
-// 取消收藏
+// 【文章】取消收藏
 router.post('/topic_collect/de_collect', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
   const { loginname, topic_id} = req.body;
@@ -347,7 +347,7 @@ router.post('/topic_collect/de_collect', function (req, res) {
   })
 });
 
-// 评论文章
+// 【文章】评论文章
 router.post('/topic/:topicId/replies', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
   const {topicId} = req.params;
@@ -417,7 +417,7 @@ router.post('/topic/:topicId/replies', function (req, res) {
 
 });
 
-// 点赞文章
+// 【文章】点赞文章
 router.post('/reply/:replyId/ups', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
   const { replyId } = req.params;
@@ -448,7 +448,5 @@ router.post('/reply/:replyId/ups', function (req, res) {
 
 
 });
-
-// 通知
 
 module.exports = router;
