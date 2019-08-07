@@ -60,7 +60,9 @@ router.post('/register', function (req, res) {
 
       // 默认存一个空的消息合辑
       const b = function (callback) {
+        console.log(loginname)
         new MessageModel({
+          loginname,
           has_read_messages: [],
           hasnot_read_messages: []
         }).save(function (err) {
@@ -141,8 +143,9 @@ router.get('/topic_collect/:loginname',function (req, res) {
 // 【用户】获取用户的未读消息数
 router.get('/message/count', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
-  MessageModel.find({}, function (err, doc) {
-    const count = doc[0].hasnot_read_messages.length;
+  const {loginname} = req.query;
+  MessageModel.findOne({loginname}, function (err, doc) {
+    const count = doc.hasnot_read_messages.length;
     res.send({data: count})
   })
 });
@@ -150,8 +153,9 @@ router.get('/message/count', function (req, res) {
 // 【用户】获取用户的已读/未读消息
 router.get('/messages', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
-  MessageModel.find({}, function (err, doc) {
-    const {has_read_messages, hasnot_read_messages } = doc[0];
+  const {loginname} = req.query;
+  MessageModel.findOne({loginname}, function (err, doc) {
+    const {has_read_messages, hasnot_read_messages } = doc;
     res.send({data: {has_read_messages, hasnot_read_messages}, success: true})
   })
 });
@@ -359,11 +363,13 @@ router.post('/topic/:topicId/replies', function (req, res) {
     if(!usr) {
       console.log(err)
     } else {
+      // a. 拿到评论者的loginname & avatar_url
       const a = function(callback) {
         author.loginname = usr.loginname;
         author.avatar_url = usr.avatar_url;
         callback(null, author)
       };
+      // b. TopicModel中对replies的推入
       const b = function(callback) {
         TopicModel.findById({_id:topicId}, function (err, doc) {
           if(!doc) {
@@ -387,7 +393,32 @@ router.post('/topic/:topicId/replies', function (req, res) {
           }
         })
       };
-      async.series([a,b], function (err, result) {
+      // c. MessageModel中评论内容的推入
+      const c = function(callback) {
+        MessageModel.findOne({loginname: topic_author.loginname}, function (err, doc) {
+          doc.hasnot_read_messages.push({
+            type: 'reply',
+            has_read: false,
+            author, //评论者
+            topic: {
+              id: topicId,
+              title,
+              last_reply_at: new Date(),
+            }, // 文章作者
+            reply: {
+              content,
+              ups: [],
+              create_at: new Date(),
+            }
+          });
+          doc.save(function (err) {
+            callback(null, 'c')
+          })
+        })
+
+      };
+
+      async.series([a,b,c], function (err, result) {
         const data = {
           author: topic_author,
           id: topicId,
@@ -412,8 +443,6 @@ router.post('/topic/:topicId/replies', function (req, res) {
 
 
   })
-
-
 
 });
 
@@ -447,6 +476,61 @@ router.post('/reply/:replyId/ups', function (req, res) {
   })
 
 
+});
+
+// 将多条消息标为已读
+router.post('/message/mark_all', function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  const {loginname } = req.body;
+  MessageModel.findOne({loginname}, function (err, doc) {
+    doc.has_read_messages = doc.has_read_messages.concat(doc.hasnot_read_messages);
+    doc.hasnot_read_messages = [];
+    doc.has_read_messages.forEach(item => {
+      item.has_read = true
+    });
+    doc.save(function (err) {
+      res.send({
+        data: {
+          has_read_messages: doc.has_read_messages,
+          hasnot_read_messages: doc.hasnot_read_messages
+        },
+        success: true
+      })
+    })
+  })
+
+});
+// 将单条消息标为已读
+router.post('/message/mark_one/:msgId',function (req, res) {
+  res.header("Access-Control-Allow-Origin", "*");
+  const {msgId} = req.params; // 未读消息中的_id
+  const {loginname} = req.body;
+  var msg;
+  MessageModel.findOne({loginname}, function (err, doc) {
+    doc.hasnot_read_messages = doc.hasnot_read_messages.filter(item => {
+      if(item._id == msgId) {
+        msg = item
+      }
+      return item._id != msgId
+    });
+    const { type, author, topic, reply} = msg;
+    doc.has_read_messages.push({
+      type,
+      has_read: true,
+      author,
+      topic,
+      reply
+    });
+    doc.save(function(err) {
+      res.send({
+        data: {
+          has_read_messages: doc.has_read_messages,
+          hasnot_read_messages: doc.hasnot_read_messages
+        },
+        success: true
+      })
+    })
+  })
 });
 
 module.exports = router;

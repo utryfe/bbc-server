@@ -92,6 +92,7 @@ const topicSchema = mongoose.Schema({
 
 // 定义消息的数据模型 Schema
 const messageSchema = mongoose.Schema({
+  loginname: {type: String},
   has_read_messages: [
     {
       type: {type: String},
@@ -101,6 +102,7 @@ const messageSchema = mongoose.Schema({
         avatar_url: {type: String},
       },
       topic: {
+        id: {type: String},
         title: {type: String},
         last_reply_at: {type: Date},
       },
@@ -120,6 +122,7 @@ const messageSchema = mongoose.Schema({
         avatar_url: {type: String},
       },
       topic: {
+        id: {type: String},
         title: {type: String},
         last_reply_at: {type: Date},
       },
