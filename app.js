@@ -7,6 +7,9 @@ var cors = require('cors');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
+var collectRouter = require('./routes/collect');
+var topicRouter = require('./routes/topic');
+var messageRouter = require('./routes/message');
 
 var app = express();
 
@@ -21,7 +24,10 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use('/', usersRouter);
+app.use('/', collectRouter);
+app.use('/', topicRouter);
+app.use('/', messageRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -44,13 +50,6 @@ app.use(cors({
   "Access-Control-Allow-Origin":'*',
   "Access-Control-Allow-Methods":"DELETE,PUT,POST,GET,OPTIONS",
   "Access-Control-Allow-Credentials": "true"
-
-
- /* origin:['http://localhost:8080'],
-
-  methods:['GET','POST'],
-
-  alloweHeaders:['Conten-Type', 'Authorization']*/
 }));
 
 module.exports = app;
