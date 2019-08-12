@@ -39,15 +39,11 @@ router.get('/topic/:articleId', function (req, res) {
     } else {
       const a = function(callback) {
         // 查询自己是否收藏过这篇文章
-        if(loginname != undefined) {
+        if(loginname) {
           CollectModel.findOne({loginname}, function (err, usr) {
             if(usr.collected_topics.length > 0) {
               usr.collected_topics.forEach(topic => {
-                if (topic._id == articleId) {  //ps: 不能强制转换
-                  is_collect = true
-                } else {
-                  is_collect = false
-                }
+                is_collect = String(topic._id) === String(articleId);
               });
             }
             callback(null, 'aaa')
@@ -121,7 +117,7 @@ router.post('/topics', function (req, res) {
 
       // 异步作同步处理
       async.series([a,b], function (err, result) {
-        usr.recent_topics.push(topic);
+        usr.recent_topics.unshift(topic);
         usr.save(function (err) {
           res.send({success: true, topic_id: doc_id})
         })

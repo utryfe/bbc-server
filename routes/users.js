@@ -16,7 +16,7 @@ router.get('/', function(req, res, next) {
 router.post('/register', function (req, res) {
   res.header("Access-Control-Allow-Origin", "*");
   // 读取请求参数
-  const { loginname, password} = req.body;
+  const { loginname, password, avatar_url} = req.body;
   // 处理: 判断用户是否存在
   // 查询(根据username)
   UserModel.findOne({loginname}, function (err, user) {
@@ -32,7 +32,7 @@ router.post('/register', function (req, res) {
           password: md5(password), // 密码
           recent_topics: [],
           recent_replies: [],
-          avatar_url: "https://avatars2.githubusercontent.com/u/40653619?v=4&s=120", // 头像
+          avatar_url, // 头像
         }).save(function (err, usr) {
           // 生成一个cookie(userid: user.id), 并交给浏览器保存
           res.cookie('userid', usr._id, {maxAge: 1000*60*60*24*7}); // 维持一天
@@ -59,7 +59,6 @@ router.post('/register', function (req, res) {
 
       // 默认存一个空的消息合辑
       const b = function (callback) {
-        console.log(loginname)
         new MessageModel({
           loginname,
           has_read_messages: [],
@@ -150,7 +149,7 @@ router.post('/topic/:topicId/replies', function (req, res) {
           } else {
             topic_author = doc.author;
             title = doc.title;
-            doc.replies.push({
+            doc.replies.unshift({
               author,
               content,
               create_at: new Date(),
@@ -169,7 +168,7 @@ router.post('/topic/:topicId/replies', function (req, res) {
       // c. MessageModel中评论内容的推入
       const c = function(callback) {
         MessageModel.findOne({loginname: topic_author.loginname}, function (err, doc) {
-          doc.hasnot_read_messages.push({
+          doc.hasnot_read_messages.unshift({
             type: 'reply',
             has_read: false,
             author, //评论者
@@ -198,17 +197,17 @@ router.post('/topic/:topicId/replies', function (req, res) {
           id: topicId,
           title
         };
-        if(usr.recent_replies.length != 0){
+        if(Number(usr.recent_replies.length) !== 0){
           usr.recent_replies.forEach(item => {
-            if(item.id == topicId) { // 不需要重复添加
+            if(String(item.id) === String(topicId)) { // 不需要重复添加
               usr.save()
             } else {
-              usr.recent_replies.push(data);
+              usr.recent_replies.unshift(data);
               usr.save()
             }
           })
         } else {
-          usr.recent_replies.push(data);
+          usr.recent_replies.unshift(data);
           usr.save()
         }
         return res.send({success: true})
@@ -229,11 +228,11 @@ router.post('/reply/:replyId/ups', function (req, res) {
     var action;
     TopicModel.findOne({'replies._id': replyId}, function (err, doc) {
       doc.replies.forEach(item => {
-        if(item._id == replyId) {
+        if(String(item._id) === String(replyId)) {
           item.is_uped = !item.is_uped;
           const idx = item.ups.indexOf(_id);
-          if((item.ups.length > 0 && idx == '-1' )|| item.ups.length == 0) {
-            item.ups.push(_id);
+          if((item.ups.length > 0 && idx === -1 )|| Number(item.ups.length) === 0) {
+            item.ups.unshift(_id);
             action = 'up'
           } else {
             item.ups.splice(idx, 1);

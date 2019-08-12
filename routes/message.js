@@ -53,13 +53,13 @@ router.post('/message/mark_one/:msgId',function (req, res) {
   var msg;
   MessageModel.findOne({loginname}, function (err, doc) {
     doc.hasnot_read_messages = doc.hasnot_read_messages.filter(item => {
-      if(item._id == msgId) {
+      if(String(item._id) === String(msgId)) {
         msg = item
       }
-      return item._id != msgId
+      return String(item._id) !== String(msgId)
     });
     const { type, author, topic, reply} = msg;
-    doc.has_read_messages.push({
+    doc.has_read_messages.unshift({
       type,
       has_read: true,
       author,

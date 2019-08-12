@@ -32,7 +32,7 @@ router.post('/topic_collect/collect', function (req, res) {
         if(!usr) {
           return res.send({success: false})
         } else {
-          usr.collected_topics.push(collected);
+          usr.collected_topics.unshift(collected);
           usr.save(function (err) {
             return res.send({success: true})
           })
